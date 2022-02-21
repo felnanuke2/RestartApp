@@ -14,6 +14,16 @@ struct OnBoadingView: View {
     @State private var  buttonWidth =  UIScreen.main.bounds.width-80
     
     @State private var buttonOffset: CGFloat = 0
+    
+    @State private var isAnimated : Bool = false
+    
+    @State private var imageOffset : CGFloat = 0
+    
+    @State private var imageAngle : CGFloat = 0
+    
+    @State private var titleText : String = "Share."
+    
+    var hapticFeedback = UINotificationFeedbackGenerator()
      
     var body: some View {
        
@@ -22,25 +32,67 @@ struct OnBoadingView: View {
             
             VStack(spacing: 0) {
                 
-                
+                // MARK: Header
               
-                Text("Share.").font(.system(size: 60)).fontWeight(.heavy).foregroundColor(.white)
-                Text("""
-                     It`s not how much we give
-                     but how much love we put into giving
-                     """).font(.title3.weight(.light)).foregroundColor(.white)
-                    .multilineTextAlignment(.center)
+                VStack{
+                    Text(titleText).font(.system(size: 60)).fontWeight(.heavy).foregroundColor(.white)
+                        .transition(.opacity)
+                        .id(titleText)
+                        
+                    Text("""
+                         It`s not how much we give
+                         but how much love we put into giving
+                         """).font(.title3.weight(.light)).foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                }.opacity(isAnimated ? 1 : 0 )
+                    .offset(y: isAnimated ? 0 : -40)
+                    .animation(.easeOut(duration: 1), value: isAnimated)
                 Spacer()
                 
+            //MARK: CENTER
                 ZStack{
                   
                     CircleGroupView(shapeColor: .white, shapeOpacity: 0.2)
+                        .offset(x: -imageOffset)
+                        .blur(radius: abs(imageOffset / 5))
                     Image("character-1").resizable().scaledToFit()
+                        .rotationEffect(.degrees(imageAngle))
+                        .offset(x: imageOffset)
+                      
+                        .gesture(DragGesture().onChanged{
+                            gesture in
+                            let width = gesture.translation.width
+                            if(abs(width) <= 100){
+                                imageOffset = width
+                                imageAngle = width / 19
+                              
+                            }
+                            titleText = "Give."
+                           
+                           
+                            
+                        }
+                                    .onEnded{_ in
+                            withAnimation(.easeOut(duration: 0.4)){
+                                imageOffset = 0
+                                imageAngle  = 0
+                                titleText = "Share."
+                            }
+                          
+                        }
+                        )
+                   
+                       
                 }
+               
+               
+                .opacity(isAnimated ? 1 : 0)
+                    .animation(.easeOut(duration: 0.5), value: isAnimated)
 
                 
                 Spacer()
                 
+                // MARK: Bottom
                 ZStack{
             
                     Capsule().foregroundColor(.white.opacity(0.2))
@@ -77,10 +129,15 @@ struct OnBoadingView: View {
                         }
                                                         .onEnded{
                             gesture in
-                            if(buttonOffset < (buttonWidth * 0.7)){
-                                buttonOffset = 0
-                            }else{
-                                isOnboardingActive = false;
+                            withAnimation(Animation.easeOut(duration: 0.4)){
+                                if(buttonOffset < (buttonWidth * 0.7)){
+                                    buttonOffset = 0
+                                    hapticFeedback.notificationOccurred(.warning)
+                                }else{
+                                    playSound(sound: "chimeup", type: "mp3")
+                                    hapticFeedback.notificationOccurred(.success)
+                                    isOnboardingActive = false;
+                                }
                             }
                         }
                         )
@@ -93,10 +150,16 @@ struct OnBoadingView: View {
                 }.frame(
                     width:buttonWidth,
                     height: 80, alignment: .center)
+                    .opacity(isAnimated ? 1 : 0)
+                    .offset(y: isAnimated ? 0 : 40)
+                    .animation(.easeOut(duration: 1), value: isAnimated)
                
             
                 
             }.padding(.all,40)
+             
+        }.onAppear{
+            isAnimated = true;
         }
     }
 }
